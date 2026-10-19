@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {initialState,build,expand,income,nextTurn,battle,validSave} from '../game.js';
+test('expand adjacent land, construct and earn revenue',()=>{const s=initialState();assert.equal(expand(s,'1,0'),null);assert.equal(s.cash,2875);assert.equal(build(s,'1,0','mine'),null);assert.equal(income(s),300);nextTurn(s);assert.equal(s.cash,2375);assert.equal(s.turn,2);});
+test('prevent distant claims, duplicate buildings and insufficient funds',()=>{const s=initialState();assert.ok(expand(s,'5,5'));assert.equal(s.owned.length,1);assert.equal(build(s,'0,0','saloon'),null);assert.ok(build(s,'0,0','mine'));s.cash=0;assert.ok(expand(s,'1,0'));assert.equal(s.buildings.length,1);});
+test('camp recruitment and recurring story events',()=>{const s=initialState();build(s,'0,0','camp');nextTurn(s);assert.equal(s.crew,27);nextTurn(s);assert.equal(s.event,'rush');});
+test('combat resolves losses, rewards and prohibits repeated victory',()=>{const s=initialState();const r=battle(s,0,0);assert.equal(r.win,true);assert.equal(s.crew,21);assert.equal(s.cash,3830);assert.equal(s.heat,27);assert.equal(s.defeated.length,1);assert.equal(typeof battle(s,0,0),'string');});
+test('combat defeat leaves crew alive and applies costs',()=>{const s=initialState();const r=battle(s,4,.99);assert.equal(r.win,false);assert.ok(s.crew>=1);assert.equal(s.cash,2950);assert.equal(s.defeated.length,0);});
+test('save validation rejects malformed data and accepts round trip',()=>{assert.equal(validSave(JSON.parse(JSON.stringify(initialState()))),true);assert.equal(Boolean(validSave(null)),false);const s=initialState();s.buildings=[{key:'0,0',type:'invalid'}];assert.equal(validSave(s),false);});
+test('final season ends progression',()=>{const s=initialState();s.turn=164;nextTurn(s);assert.equal(s.gameOver,true);const cash=s.cash;nextTurn(s);assert.equal(s.cash,cash);});
